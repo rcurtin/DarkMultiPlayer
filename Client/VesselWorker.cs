@@ -502,64 +502,94 @@ namespace DarkMultiPlayer
 
         private void ProcessNewVesselMessages()
         {
-            Dictionary<string, double> removeList = new Dictionary<string, double>();
-            lock (vesselRemoveQueue)
+            int throwState = 0;
+            try
             {
-                foreach (KeyValuePair<string, Queue<VesselRemoveEntry>> vesselRemoveSubspace in vesselRemoveQueue)
+                Dictionary<string, double> removeList = new Dictionary<string, double>();
+                throwState = 1;
+                lock (vesselRemoveQueue)
                 {
-                    while (vesselRemoveSubspace.Value.Count > 0 ? (vesselRemoveSubspace.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
+                    foreach (KeyValuePair<string, Queue<VesselRemoveEntry>> vesselRemoveSubspace in vesselRemoveQueue)
                     {
-                        VesselRemoveEntry removeVessel = vesselRemoveSubspace.Value.Dequeue();
-                        RemoveVessel(removeVessel.vesselID, removeVessel.isDockingUpdate, removeVessel.dockingPlayer);
-                        removeList[removeVessel.vesselID] = removeVessel.planetTime;
-                    }
-                }
-            }
-
-            foreach (KeyValuePair<string, Queue<KerbalEntry>> kerbalProtoSubspace in kerbalProtoQueue)
-            {
-                while (kerbalProtoSubspace.Value.Count > 0 ? (kerbalProtoSubspace.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
-                {
-                    KerbalEntry kerbalEntry = kerbalProtoSubspace.Value.Dequeue();
-                    LoadKerbal(kerbalEntry.kerbalNode);
-                }
-            }
-
-            foreach (KeyValuePair<string, Queue<VesselProtoUpdate>> vesselQueue in vesselProtoQueue)
-            {
-                VesselProtoUpdate vpu = null;
-                //Get the latest proto update
-                while (vesselQueue.Value.Count > 0 ? (vesselQueue.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
-                {
-                    VesselProtoUpdate newVpu = vesselQueue.Value.Dequeue();
-                    if (newVpu != null)
-                    {
-                        //Skip any protovessels that have been removed in the future
-                        if (removeList.ContainsKey(vesselQueue.Key) ? removeList[vesselQueue.Key] < vpu.planetTime : true)
+                        if (vesselRemoveSubspace.Value == null)
                         {
-                            vpu = newVpu;
+                            DarkLog.Debug("vRQ: " + vesselRemoveSubspace.Key);
+                            continue;
+                        }
+                        while (vesselRemoveSubspace.Value.Count > 0 ? (vesselRemoveSubspace.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
+                        {
+                            VesselRemoveEntry removeVessel = vesselRemoveSubspace.Value.Dequeue();
+                            RemoveVessel(removeVessel.vesselID, removeVessel.isDockingUpdate, removeVessel.dockingPlayer);
+                            removeList[removeVessel.vesselID] = removeVessel.planetTime;
                         }
                     }
                 }
-                //Apply it if there is any
-                if (vpu != null ? vpu.vesselNode != null : false)
+                throwState = 2;
+                foreach (KeyValuePair<string, Queue<KerbalEntry>> kerbalProtoSubspace in kerbalProtoQueue)
                 {
-                    LoadVessel(vpu.vesselNode, vpu.vesselID);
+                    if (kerbalProtoSubspace.Value == null)
+                    {
+                        DarkLog.Debug("kPQ: " + kerbalProtoSubspace.Key);
+                        continue;
+                    }
+                    while (kerbalProtoSubspace.Value.Count > 0 ? (kerbalProtoSubspace.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
+                    {
+                        KerbalEntry kerbalEntry = kerbalProtoSubspace.Value.Dequeue();
+                        LoadKerbal(kerbalEntry.kerbalNode);
+                    }
+                }
+                throwState = 3;
+                foreach (KeyValuePair<string, Queue<VesselProtoUpdate>> vesselQueue in vesselProtoQueue)
+                {
+                    if (vesselQueue.Value == null)
+                    {
+                        DarkLog.Debug("vPQ: " + vesselQueue.Key);
+                        continue;
+                    }
+                    VesselProtoUpdate vpu = null;
+                    //Get the latest proto update
+                    while (vesselQueue.Value.Count > 0 ? (vesselQueue.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
+                    {
+                        VesselProtoUpdate newVpu = vesselQueue.Value.Dequeue();
+                        if (newVpu != null)
+                        {
+                            //Skip any protovessels that have been removed in the future
+                            if (removeList.ContainsKey(vesselQueue.Key) ? removeList[vesselQueue.Key] < vpu.planetTime : true)
+                            {
+                                vpu = newVpu;
+                            }
+                        }
+                    }
+                    //Apply it if there is any
+                    if (vpu != null ? vpu.vesselNode != null : false)
+                    {
+                        LoadVessel(vpu.vesselNode, vpu.vesselID);
+                    }
+                }
+                throwState = 4;
+                foreach (KeyValuePair<string, Queue<VesselUpdate>> vesselQueue in vesselUpdateQueue)
+                {
+                    if (vesselQueue.Value == null)
+                    {
+                        DarkLog.Debug("vUQ: " + vesselQueue.Key);
+                        continue;
+                    }
+                    VesselUpdate vu = null;
+                    //Get the latest position update
+                    while (vesselQueue.Value.Count > 0 ? (vesselQueue.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
+                    {
+                        vu = vesselQueue.Value.Dequeue();
+                    }
+                    //Apply it if there is any
+                    if (vu != null)
+                    {
+                        vu.Apply();
+                    }
                 }
             }
-            foreach (KeyValuePair<string, Queue<VesselUpdate>> vesselQueue in vesselUpdateQueue)
+            catch (Exception e)
             {
-                VesselUpdate vu = null;
-                //Get the latest position update
-                while (vesselQueue.Value.Count > 0 ? (vesselQueue.Value.Peek().planetTime < Planetarium.GetUniversalTime()) : false)
-                {
-                    vu = vesselQueue.Value.Dequeue();
-                }
-                //Apply it if there is any
-                if (vu != null)
-                {
-                    vu.Apply();
-                }
+                DarkLog.Debug("UPDATE THROW: Threw in state " + throwState + ", exception " + e);
             }
         }
 

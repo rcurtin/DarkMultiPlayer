@@ -42,5 +42,23 @@ namespace DarkMultiPlayer
                 }
             }
         }
+
+        //TO DEBUG VECTORS
+        /*
+        public static GameObject line1;
+        public static LineRenderer renderer1;
+        line1 = new GameObject();
+        renderer1 = line1.AddComponent<LineRenderer>();
+        renderer1.SetWidth(0.1f, 0.1f);
+        renderer1.SetVertexCount(2);
+        renderer1.SetColors(Color.red, Color.red);
+        Texture2D redTex = new Texture2D(1, 1);
+        redTex.SetPixel(0, 0, Color.red);
+        redTex.Apply();
+        renderer1.material = new Material(Shader.Find("Unlit/Texture"));
+        renderer1.material.mainTexture = redTex;
+        renderer1.SetPosition(0, src);
+        renderer1.SetPosition(1, dst);
+        */
     }
 }
