@@ -26,8 +26,10 @@ namespace DarkMultiPlayerServer
 
         public static void Main()
         {
+            #if !DEBUG
             try
             {
+            #endif
 
                 //Start the server clock
                 serverClock = new Stopwatch();
@@ -85,6 +87,7 @@ namespace DarkMultiPlayerServer
                 //Load plugins
                 DMPPluginHandler.LoadPlugins();
 
+
                 Console.Title = "DMPServer " + Common.PROGRAM_VERSION + ", protocol " + Common.PROTOCOL_VERSION;
 
                 while (serverStarting || serverRestarting)
@@ -100,7 +103,6 @@ namespace DarkMultiPlayerServer
                     //Load universe
                     DarkLog.Normal("Loading universe... ");
                     CheckUniverse();
-                    DarkLog.Normal("Done!");
 
                     DarkLog.Normal("Starting " + Settings.settingsStore.warpMode + " server on port " + Settings.settingsStore.port + "... ");
 
@@ -113,11 +115,10 @@ namespace DarkMultiPlayerServer
                     {
                         Thread.Sleep(500);
                     }
-                    DarkLog.Normal("Done!");
 
                     StartHTTPServer();
-                    DarkLog.Normal("Done!");
                     DMPPluginHandler.FireOnServerStart();
+                    DarkLog.Debug("Ready for clients!");
                     while (serverRunning)
                     {
                         //Run a garbage collection every 30 seconds.
@@ -158,12 +159,14 @@ namespace DarkMultiPlayerServer
                 }
                 DarkLog.Normal("Goodbye!");
                 Environment.Exit(0);
+            #if !DEBUG
             }
             catch (Exception e)
             {
                 DarkLog.Fatal("Error in main server thread, Exception: " + e);
                 throw;
             }
+            #endif
         }
 
         // Check universe folder size
@@ -218,6 +221,10 @@ namespace DarkMultiPlayerServer
             if (!Directory.Exists(Path.Combine(Server.universeDirectory, "Flags")))
             {
                 Directory.CreateDirectory(Path.Combine(Server.universeDirectory, "Flags"));
+            }
+            if (!Directory.Exists(Path.Combine(Server.universeDirectory, "Groups")))
+            {
+                Directory.CreateDirectory(Path.Combine(Server.universeDirectory, "Groups"));
             }
             if (!Directory.Exists(Path.Combine(universeDirectory, "Players")))
             {

@@ -23,6 +23,12 @@ namespace DarkMultiPlayerCommon
         //Compression threshold
         public const int COMPRESSION_THRESHOLD = 4096;
 
+        public static string CalculateSHA256HashFromString(string text)
+        {
+            UTF8Encoding encoder = new UTF8Encoding();
+            return CalculateSHA256Hash(encoder.GetBytes(text));
+        }
+
         public static string CalculateSHA256Hash(string fileName)
         {
             return CalculateSHA256Hash(File.ReadAllBytes(fileName));
@@ -439,6 +445,7 @@ namespace DarkMultiPlayerCommon
         MOTD_REQUEST,
         WARP_CONTROL,
         LOCK_SYSTEM,
+        GROUP_SYSTEM,
         MOD_DATA,
         SPLIT_MESSAGE,
         CONNECTION_END
@@ -473,6 +480,7 @@ namespace DarkMultiPlayerCommon
         WARP_CONTROL,
         ADMIN_SYSTEM,
         LOCK_SYSTEM,
+        GROUP_SYSTEM,
         MOD_DATA,
         SPLIT_MESSAGE,
         CONNECTION_END
@@ -595,6 +603,18 @@ namespace DarkMultiPlayerCommon
     {
         LIST,
         SET,
+    }
+
+    public enum GroupMessageType
+    {
+        SET,
+        REMOVE,
+    }
+
+    public enum GroupPrivacy
+    {
+        PUBLIC,
+        PRIVATE
     }
 
     public class ClientMessage

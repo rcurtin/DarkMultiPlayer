@@ -11,6 +11,10 @@ namespace DarkMultiPlayerServer.Messages
 
         public static void SendChatMessageToClient(ClientObject client, string messageText)
         {
+            if (client == null)
+            {
+                return;
+            }
             ServerMessage newMessage = new ServerMessage();
             newMessage.type = ServerMessageType.CHAT_MESSAGE;
             using (MessageWriter mw = new MessageWriter())
@@ -58,6 +62,10 @@ namespace DarkMultiPlayerServer.Messages
 
         public static void SendConsoleMessageToClient(ClientObject client, string message)
         {
+            if (client == null)
+            {
+                return;
+            }
             ServerMessage newMessage = new ServerMessage();
             newMessage.type = ServerMessageType.CHAT_MESSAGE;
             using (MessageWriter mw = new MessageWriter())

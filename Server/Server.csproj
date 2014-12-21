@@ -87,6 +87,8 @@
     <Compile Include="WhitelistCommand.cs" />
     <Compile Include="AdminCommand.cs" />
     <Compile Include="KickCommand.cs" />
+    <Compile Include="GroupSystem.cs" />
+    <Compile Include="Messages\Group.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\DarkMultiPlayerCommon.csproj">

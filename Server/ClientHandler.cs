@@ -25,8 +25,10 @@ namespace DarkMultiPlayerServer
 
         public static void ThreadMain()
         {
+            #if !DEBUG
             try
             {
+            #endif
                 clients = new List<ClientObject>().AsReadOnly();
 
                 Messages.WarpControl.Reset();
@@ -49,6 +51,7 @@ namespace DarkMultiPlayerServer
                     DMPPluginHandler.FireOnUpdate();
                     Thread.Sleep(10);
                 }
+            #if !DEBUG
             }
             catch (Exception e)
             {
@@ -57,6 +60,7 @@ namespace DarkMultiPlayerServer
             }
             try
             {
+            #endif
                 long disconnectTime = DateTime.UtcNow.Ticks;
                 bool sendingHighPriotityMessages = true;
                 while (sendingHighPriotityMessages)
@@ -77,12 +81,14 @@ namespace DarkMultiPlayerServer
                     Thread.Sleep(10);
                 }
                 ShutdownTCPServer();
+            #if !DEBUG
             }
             catch (Exception e)
             {
                 DarkLog.Fatal("Fatal error thrown during shutdown, exception: " + e);
                 throw;
             }
+            #endif
         }
 
         private static void SetupTCPServer()
@@ -551,8 +557,10 @@ namespace DarkMultiPlayerServer
                 return;
             }
 
+            #if !DEBUG
             try
             {
+            #endif
                 switch (message.type)
                 {
                     case ClientMessageType.HEARTBEAT:
@@ -629,12 +637,14 @@ namespace DarkMultiPlayerServer
                         Messages.ConnectionEnd.SendConnectionEnd(client, "Unhandled message type " + message.type);
                         break;
                 }
+            #if !DEBUG
             }
             catch (Exception e)
             {
                 DarkLog.Debug("Error handling " + message.type + " from " + client.playerName + ", exception: " + e);
                 Messages.ConnectionEnd.SendConnectionEnd(client, "Server failed to process " + message.type + " message");
             }
+            #endif
         }
 
         //Call with null client to send to all clients. Also called from Dekessler and NukeKSC.
