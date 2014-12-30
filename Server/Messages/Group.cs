@@ -7,6 +7,17 @@ namespace DarkMultiPlayerServer.Messages
 {
     public class Group
     {
+        public static void SendAllGroupsToAllClients()
+        {
+            Dictionary<string, GroupObject> groupState = GroupSystem.fetch.GetCopy();
+            foreach (KeyValuePair<string, GroupObject> kvp in groupState)
+            {
+                ServerMessage newMessage = new ServerMessage();
+                newMessage.type = ServerMessageType.GROUP_SYSTEM;
+                newMessage.data = GetGroupBytes(kvp.Key, kvp.Value);
+                ClientHandler.SendToAll(null, newMessage, true);
+            }
+        }
         public static void SendAllGroupsToClient(ClientObject client)
         {
             Dictionary<string, GroupObject> groupState = GroupSystem.fetch.GetCopy();
