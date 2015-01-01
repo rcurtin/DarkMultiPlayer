@@ -23,7 +23,7 @@ namespace DarkMultiPlayerServer.Messages
             Messages.WarpControl.SendAllSubspaces(client);
             Messages.PlayerColor.SendAllPlayerColors(client);
             Messages.PlayerStatus.SendAllPlayerStatus(client);
-            Messages.ScenarioData.SendScenarioModules(client);
+            Messages.ScenarioData.SendScenarioModules(client, false);
             Messages.WarpControl.SendAllReportedSkewRates(client);
             Messages.CraftLibrary.SendCraftList(client);
             Messages.Chat.SendPlayerChatChannels(client);

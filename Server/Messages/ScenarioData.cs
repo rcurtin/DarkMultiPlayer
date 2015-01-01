@@ -7,7 +7,7 @@ namespace DarkMultiPlayerServer.Messages
 {
     public class ScenarioData
     {
-        public static void SendScenarioModules(ClientObject client)
+        public static void SendScenarioModules(ClientObject client, bool sendToAll)
         {
             int numberOfScenarioModules = Directory.GetFiles(Path.Combine(Server.universeDirectory, "Scenarios", client.playerName)).Length;
             int currentScenarioModule = 0;
@@ -20,7 +20,9 @@ namespace DarkMultiPlayerServer.Messages
                 scenarioDataArray[currentScenarioModule] = File.ReadAllBytes(file);
                 currentScenarioModule++;
             }
+            ServerMessage compressedMessage = new ServerMessage();
             ServerMessage newMessage = new ServerMessage();
+            compressedMessage.type = ServerMessageType.SCENARIO_DATA;
             newMessage.type = ServerMessageType.SCENARIO_DATA;
             using (MessageWriter mw = new MessageWriter())
             {
@@ -36,9 +38,27 @@ namespace DarkMultiPlayerServer.Messages
                         mw.Write<byte[]>(Compression.AddCompressionHeader(scenarioData, false));
                     }
                 }
+                compressedMessage.data = mw.GetMessageBytes();
+            }
+
+            using (MessageWriter mw = new MessageWriter())
+            {
+                mw.Write<string[]>(scenarioNames);
+                foreach (byte[] scenarioData in scenarioDataArray)
+                {
+                    mw.Write<byte[]>(Compression.AddCompressionHeader(scenarioData, false));
+                }
                 newMessage.data = mw.GetMessageBytes();
             }
-            ClientHandler.SendToClient(client, newMessage, true);
+
+            if (sendToAll)
+            {
+                ClientHandler.SendToAllAutoCompressed(client, compressedMessage, newMessage, true);
+            }
+            else
+            {
+                ClientHandler.SendToClient(client, compressedMessage, true);
+            }
         }
 
         public static void HandleScenarioModuleData(ClientObject client, byte[] messageData)
