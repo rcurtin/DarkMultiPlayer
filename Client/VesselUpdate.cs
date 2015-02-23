@@ -21,7 +21,15 @@ namespace DarkMultiPlayer
         public double[] velocity;
         public double[] acceleration;
         public float[] terrainNormal;
-        public static ScreenMessage ourNormalMessage;
+        public static LineRendererDebug ourNormalLine;
+        public static LineRendererDebug theirNormalLine;
+        public static LineRendererDebug crossNormalLine;
+        public static QuaternionRendererDebug ourRotDebug;
+        public static QuaternionRendererDebug theirRotDebug;
+        public static QuaternionRendererDebug identityRotDebug;
+        public static QuaternionRendererDebug fudgeRotDebug;
+        public static ScreenMessage debugMessage;
+        public static float lastUpdateTime = float.NegativeInfinity;
 
         public static VesselUpdate CopyFromVessel(Vessel updateVessel)
         {
@@ -128,6 +136,9 @@ namespace DarkMultiPlayer
 
             Quaternion normalRotate = Quaternion.identity;
             //Position/Velocity
+            bool rotFudge = false;
+            Vector3 upAxis = updateBody.GetSurfaceNVector(position[0], position[1]);
+            Vector3 startPos = updateVessel.GetWorldPos3D() + Vector3.Scale(upAxis, new Vector3(5f, 5f, 5f));
             if (isSurfaceUpdate)
             {
                 //Get the new position/velocity
@@ -135,20 +146,36 @@ namespace DarkMultiPlayer
                 VesselUtil.DMPRaycastPair dmpRaycast = VesselUtil.RaycastGround(position[0], position[1], updateBody);
                 if (dmpRaycast.altitude != -1d && position[3] != -1d)
                 {
-                    Vector3 theirNormal = new Vector3(terrainNormal[0], terrainNormal[1], terrainNormal[2]);
-                    if (ourNormalMessage != null)
-                    {
-                        ourNormalMessage.duration = float.NegativeInfinity;
-                        ourNormalMessage = null;
-                    }
 
+                    Vector3 theirNormal = new Vector3(terrainNormal[0], terrainNormal[1], terrainNormal[2]);
                     altitudeFudge = dmpRaycast.altitude - position[3];
                     if (Math.Abs(position[2] - position[3]) < 50f)
                     {
                         normalRotate = Quaternion.FromToRotation(theirNormal, dmpRaycast.terrainNormal);
-                        float angle = Vector3.Angle(theirNormal, dmpRaycast.terrainNormal);
-                        ourNormalMessage = ScreenMessages.PostScreenMessage("Our normal: " + dmpRaycast.terrainNormal + ", mag: " + dmpRaycast.terrainNormal.normalized + ", angle: " + angle);
                     }
+                    //===DEBUG===
+                    if (ourNormalLine == null)
+                    {
+                        ourNormalLine = new LineRendererDebug(Color.red);
+                        theirNormalLine = new LineRendererDebug(Color.blue);
+                        crossNormalLine = new LineRendererDebug(Color.black);
+                    }
+                    if (debugMessage == null)
+                    {
+                        debugMessage = ScreenMessages.PostScreenMessage("", float.PositiveInfinity, ScreenMessageStyle.UPPER_CENTER);
+                    }
+                    float outAngle;
+                    Vector3 outAxis;
+                    normalRotate.ToAngleAxis(out outAngle, out outAxis);
+                    debugMessage.message = "Current difference: " + Math.Round(outAngle, 2) + "degrees, ourAlt: " + dmpRaycast.altitude + ", theirAlt: " + position[3];
+                    Vector3 vec2 = new Vector3(2f, 2f, 2f);
+                    Vector3 crossVector = Vector3.Cross(dmpRaycast.terrainNormal, theirNormal).normalized;
+                    ourNormalLine.UpdatePosition(startPos, startPos + Vector3.Scale(updateBody.bodyTransform.rotation * dmpRaycast.terrainNormal, vec2));
+                    theirNormalLine.UpdatePosition(startPos, startPos + Vector3.Scale(updateBody.bodyTransform.rotation * theirNormal, vec2));
+                    crossNormalLine.UpdatePosition(startPos, startPos + Vector3.Scale(updateBody.bodyTransform.rotation * crossVector, vec2));
+                    lastUpdateTime = Time.realtimeSinceStartup;
+                    rotFudge = true;
+                    //===END DEBUG===
                 }
 
                 Vector3d updatePostion = updateBody.GetWorldSurfacePosition(position[0], position[1], position[2] + altitudeFudge);
@@ -215,13 +242,51 @@ namespace DarkMultiPlayer
             }
 
             //Rotation
-            Quaternion updateRotation = normalRotate * new Quaternion(rotation[0], rotation[1], rotation[2], rotation[3]);
+            Quaternion unfudgedRotation = new Quaternion(rotation[0], rotation[1], rotation[2], rotation[3]);
+            Quaternion updateRotation = normalRotate * unfudgedRotation;
             updateVessel.SetRotation(updateVessel.mainBody.bodyTransform.rotation * updateRotation);
             if (updateVessel.packed)
             {
                 updateVessel.srfRelRotation = updateRotation;
                 updateVessel.protoVessel.rotation = updateVessel.srfRelRotation;
             }
+
+            //===DEBUG===
+            if (rotFudge)
+            {
+                if (ourRotDebug == null)
+                {
+                    ourRotDebug = new QuaternionRendererDebug(Color.yellow);
+                    theirRotDebug = new QuaternionRendererDebug(Color.green);
+                    identityRotDebug = new QuaternionRendererDebug(Color.white);
+                    fudgeRotDebug = new QuaternionRendererDebug(Color.grey);
+                }
+                ourRotDebug.UpdateRotation(startPos, updateBody.bodyTransform.rotation, unfudgedRotation);
+                theirRotDebug.UpdateRotation(startPos, updateBody.bodyTransform.rotation, updateRotation);
+                identityRotDebug.UpdateRotation(startPos, updateBody.bodyTransform.rotation, Quaternion.identity);
+                fudgeRotDebug.UpdateRotation(startPos, updateBody.bodyTransform.rotation, normalRotate);
+            }
+
+            if (ourRotDebug != null && (Time.realtimeSinceStartup - lastUpdateTime) > 5f)
+            {
+                ourRotDebug.Destroy();
+                ourRotDebug = null;
+                theirRotDebug.Destroy();
+                theirRotDebug = null;
+                identityRotDebug.Destroy();
+                identityRotDebug = null;
+                fudgeRotDebug.Destroy();
+                fudgeRotDebug = null;
+                ourNormalLine.Destroy();
+                ourNormalLine = null;
+                theirNormalLine.Destroy();
+                theirNormalLine = null;
+                crossNormalLine.Destroy();
+                crossNormalLine = null;
+                debugMessage.duration = float.NegativeInfinity;
+                debugMessage = null;
+            }
+            //===END DEBUG==
 
             //Angular velocity
             //Vector3 angularVelocity = new Vector3(this.angularVelocity[0], this.angularVelocity[1], this.angularVelocity[2]);
@@ -258,4 +323,5 @@ namespace DarkMultiPlayer
         }
     }
 }
+
 

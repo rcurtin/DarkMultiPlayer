@@ -5,6 +5,8 @@ namespace DarkMultiPlayer
 {
     public class VesselUtil
     {
+        private static ScreenMessage groundHeight;
+
         //Credit where credit is due, Thanks hyperedit.
         public static void CopyOrbit(Orbit sourceOrbit, Orbit destinationOrbit)
         {
@@ -48,6 +50,11 @@ namespace DarkMultiPlayer
                     if (!body.ocean || hitAltitude > 0)
                     {
                         Vector3 rotatedVector = Quaternion.Inverse(body.rotation) * raycastHit.normal;
+                        if (groundHeight == null)
+                        {
+                            groundHeight = ScreenMessages.PostScreenMessage("", float.PositiveInfinity, ScreenMessageStyle.UPPER_CENTER);
+                        }
+                        groundHeight.message = "Ground Height: " + hitAltitude + " input lat: " + latitude + ", input long: " + longitude;
                         return new DMPRaycastPair(hitAltitude, rotatedVector);
                     }
                 }
